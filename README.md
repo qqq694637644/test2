@@ -67,3 +67,48 @@ PORTABLE_WORKFLOW_DEVELOPMENT_LESSONS.md
 python -m pytest -q
 python -m compileall -q src tests
 ```
+
+## 坦克大战
+
+仓库同时提供一个无第三方依赖的 Python 终端版坦克大战。游戏核心逻辑在
+`tank_battle.engine` 中，命令行入口只负责输入输出，方便用单元测试覆盖移动、射击、
+敌方 AI 和胜负判定。
+
+运行方式：
+
+```text
+PYTHONPATH=src python -m tank_battle
+```
+
+Windows PowerShell 源码目录运行：
+
+```text
+$env:PYTHONPATH = "src"; python -m tank_battle
+```
+
+安装包后也可以使用：
+
+```text
+python -m tank_battle
+```
+
+或脚本入口：
+
+```text
+tank-battle
+```
+
+操作方式：
+
+```text
+W/A/S/D 或 up/down/left/right  移动并转向
+F 或 fire                      开火
+Enter 或 wait                  跳过回合
+Q 或 quit                      退出
+```
+
+也支持非交互脚本动作，适合快速 smoke test：
+
+```text
+PYTHONPATH=src python -m tank_battle --actions right,fire,wait
+```
