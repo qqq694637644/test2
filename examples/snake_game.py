@@ -1,8 +1,7 @@
-"""Command-line Snake game.
+"""Standalone command-line Snake example.
 
-This module intentionally uses only the Python standard library so the game can
-run after installing the package without extra dependencies. The game logic is
-kept separate from terminal input/rendering to make it easy to test.
+This file deliberately lives outside the installable ``vm_test_template`` package.
+Run it directly from a checkout with ``python examples/snake_game.py``.
 """
 
 from __future__ import annotations
@@ -10,7 +9,6 @@ from __future__ import annotations
 import argparse
 import os
 import random
-import shutil
 import sys
 import time
 from collections import deque
@@ -46,6 +44,7 @@ KEY_DIRECTIONS: dict[str, Direction] = {
     "l": "right",
     "\x1b[C": "right",
 }
+ESCAPE_SEQUENCE_TIMEOUT_SECONDS = 0.03
 
 
 @dataclass(frozen=True)
@@ -63,8 +62,13 @@ class GameConfig:
             raise ValueError("height must be at least 6")
         if self.initial_length < 2:
             raise ValueError("initial length must be at least 2")
-        if self.initial_length >= self.width:
-            raise ValueError("initial length must be smaller than board width")
+
+        max_centered_length = self.width // 2 + 1
+        if self.initial_length > max_centered_length:
+            raise ValueError(
+                "initial length must fit on the board when centered "
+                f"(max {max_centered_length} for width {self.width})"
+            )
 
 
 @dataclass(frozen=True)
@@ -181,8 +185,8 @@ class SnakeGame:
 class KeyboardReader:
     """Non-blocking terminal key reader for POSIX and Windows terminals."""
 
-    def __init__(self, input_stream: TextIO = sys.stdin) -> None:
-        self.input_stream = input_stream
+    def __init__(self, input_stream: TextIO | None = None) -> None:
+        self.input_stream = input_stream if input_stream is not None else sys.stdin
         self._old_terminal_settings: list[object] | None = None
         self._fd: int | None = None
 
@@ -241,16 +245,18 @@ class KeyboardReader:
         if key != "\x1b":
             return key
 
-        readable, _, _ = select.select([self.input_stream], [], [], 0)
-        if not readable:
-            return key
-        second = self.input_stream.read(1)
-
-        readable, _, _ = select.select([self.input_stream], [], [], 0)
-        if not readable:
-            return key + second
-        third = self.input_stream.read(1)
-        return key + second + third
+        sequence = [key]
+        for _ in range(2):
+            readable, _, _ = select.select(
+                [self.input_stream],
+                [],
+                [],
+                ESCAPE_SEQUENCE_TIMEOUT_SECONDS,
+            )
+            if not readable:
+                break
+            sequence.append(self.input_stream.read(1))
+        return "".join(sequence)
 
 
 def direction_from_key(key: str) -> Direction | None:
@@ -289,36 +295,19 @@ def render_board(game: SnakeGame, *, paused: bool = False, message: str = "") ->
     return "\n".join(lines) + "\n"
 
 
-def _enable_windows_ansi() -> None:
-    if os.name != "nt":
-        return
-    try:
-        import ctypes
-
-        kernel32 = ctypes.windll.kernel32
-        handle = kernel32.GetStdHandle(-11)
-        mode = ctypes.c_ulong()
-        if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
-            kernel32.SetConsoleMode(handle, mode.value | 0x0004)
-    except Exception:
-        # Modern Windows terminals usually support ANSI already. If enabling it
-        # fails, the game still works but may redraw less cleanly.
-        return
-
-
 def run_terminal_game(
     config: GameConfig,
     *,
     speed: float,
     seed: int | None = None,
-    output: TextIO = sys.stdout,
+    output: TextIO | None = None,
 ) -> int:
     """Run the interactive terminal UI."""
 
     if speed <= 0:
         raise ValueError("speed must be greater than 0")
 
-    _enable_windows_ansi()
+    output = output if output is not None else sys.stdout
     game = SnakeGame.create(config=config, seed=seed)
     frame_delay_seconds = 1 / speed
     last_tick = time.monotonic()
@@ -385,16 +374,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _terminal_size_hint(config: GameConfig) -> str:
-    size = shutil.get_terminal_size(fallback=(80, 24))
+def terminal_size_hint(config: GameConfig, columns: int, lines: int) -> str:
+    """Return a warning when the terminal is smaller than the board needs."""
+
     needed_columns = config.width + 2
     needed_lines = config.height + 4
-    if size.columns >= needed_columns and size.lines >= needed_lines:
+    if columns >= needed_columns and lines >= needed_lines:
         return ""
     return (
-        f"terminal is {size.columns}x{size.lines}; "
+        f"terminal is {columns}x{lines}; "
         f"recommended minimum is {needed_columns}x{needed_lines}"
     )
+
+
+def _terminal_size_hint(config: GameConfig, output: TextIO | None = None) -> str:
+    output = output if output is not None else sys.stdout
+    size = os.get_terminal_size(output.fileno())
+    return terminal_size_hint(config, columns=size.columns, lines=size.lines)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -405,16 +401,21 @@ def main(argv: list[str] | None = None) -> int:
         if args.speed <= 0:
             raise ValueError("speed must be greater than 0")
     except ValueError as exc:
-        print(f"snake-game: {exc}", file=sys.stderr)
+        print(f"snake example: {exc}", file=sys.stderr)
         return 2
 
     if not sys.stdin.isatty() or not sys.stdout.isatty():
-        print("snake-game requires an interactive terminal (TTY).", file=sys.stderr)
+        print("snake example requires an interactive terminal (TTY).", file=sys.stderr)
         return 2
 
-    hint = _terminal_size_hint(config)
+    try:
+        hint = _terminal_size_hint(config)
+    except OSError as exc:
+        print(f"snake example: cannot read terminal size: {exc}", file=sys.stderr)
+        return 2
+
     if hint:
-        print(f"snake-game: warning: {hint}", file=sys.stderr)
+        print(f"snake example: warning: {hint}", file=sys.stderr)
 
     try:
         return run_terminal_game(config, speed=args.speed, seed=args.seed)
