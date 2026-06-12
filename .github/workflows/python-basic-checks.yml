@@ -1,0 +1,96 @@
+name: Python basic checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "gpt/**"
+
+permissions:
+  contents: read
+
+jobs:
+  python-basic-checks:
+    name: Compile and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile source, tests, and examples
+        shell: python
+        run: |
+          import compileall
+          from pathlib import Path
+
+          roots = [Path("src"), Path("tests"), Path("examples")]
+          failed = [str(root) for root in roots if not compileall.compile_dir(root, quiet=1)]
+          if failed:
+              raise SystemExit("compileall failed for: " + ", ".join(failed))
+
+      - name: Run standalone Snake example help
+        shell: python
+        run: |
+          import subprocess
+          import sys
+
+          subprocess.run([sys.executable, "examples/snake_game.py", "--help"], check=True)
+
+      - name: Run standalone Snake example smoke
+        shell: python
+        run: |
+          import importlib.util
+          import sys
+          from collections import deque
+          from pathlib import Path
+
+          assert not Path("src/vm_test_template/snake.py").exists()
+          pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+          assert "snake-game" not in pyproject
+          assert "vm_test_template.snake" not in pyproject
+
+          path = Path("examples/snake_game.py").resolve()
+          spec = importlib.util.spec_from_file_location("snake_game_example", path)
+          if spec is None or spec.loader is None:
+              raise SystemExit(f"cannot load Snake example from {path}")
+          snake = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = snake
+          spec.loader.exec_module(snake)
+
+          game = snake.SnakeGame.create(snake.GameConfig(width=10, height=6), seed=1)
+          assert game.food not in game.snake
+          game.food = (game.head[0] + 1, game.head[1])
+          old_length = len(game.snake)
+          result = game.step()
+          assert result.ate_food
+          assert game.score == 1
+          assert len(game.snake) == old_length + 1
+
+          try:
+              snake.SnakeGame.create(snake.GameConfig(width=10, height=6, initial_length=7))
+          except ValueError as exc:
+              assert "initial length must fit" in str(exc)
+          else:
+              raise AssertionError("invalid initial_length was accepted")
+
+          config = snake.GameConfig(width=10, height=6)
+          win_game = snake.SnakeGame.create(config, seed=1)
+          food = (9, 5)
+          cells = [(x, y) for y in range(config.height) for x in range(config.width)]
+          win_game.snake = deque(
+              [(8, 5), *(cell for cell in cells if cell not in {(8, 5), food})]
+          )
+          win_game.direction = "right"
+          win_game.food = food
+          result = win_game.step()
+          assert result.won
+          assert win_game.won
+          assert win_game.food is None

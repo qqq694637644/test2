@@ -53,7 +53,9 @@ def test_command_action_passes_command_json(tmp_path):
 
 
 def test_workflow_yaml_uses_python_files_not_powershell_or_cmd():
-    workflow = Path(".github/workflows/disposable-vm-guest-agent-smoke.yml").read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/disposable-vm-guest-agent-smoke.yml").read_text(
+        encoding="utf-8",
+    )
 
     assert "shell: python" in workflow
     assert "shell: cmd" not in workflow
@@ -62,6 +64,22 @@ def test_workflow_yaml_uses_python_files_not_powershell_or_cmd():
     assert "runpy.run_path" in workflow
     assert "workflow_runner.py" in workflow
     assert "workflow_install.py" in workflow
+
+
+def test_python_basic_checks_workflow_runs_on_pr_and_branch_push():
+    workflow = Path(".github/workflows/python-basic-checks.yml").read_text(encoding="utf-8")
+
+    assert "pull_request:" in workflow
+    assert "push:" in workflow
+    assert '"gpt/**"' in workflow
+    assert "ubuntu-latest" in workflow
+    assert "shell: python" in workflow
+    assert "shell: cmd" not in workflow
+    assert "shell: pwsh" not in workflow
+    assert "$ErrorActionPreference" not in workflow
+    assert "compileall" in workflow
+    assert "examples/snake_game.py" in workflow
+    assert "snake-game =" not in workflow
 
 
 def test_workflow_runner_reads_github_event_inputs(tmp_path, monkeypatch):
