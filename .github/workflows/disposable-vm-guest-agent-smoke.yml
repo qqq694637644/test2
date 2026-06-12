@@ -1,0 +1,89 @@
+name: Disposable VM guest agent smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      controller_url:
+        description: "URL guest can use to reach the host controller"
+        required: false
+        default: "http://192.168.1.249:8766"
+      port:
+        description: "Host controller listen port"
+        required: true
+        default: "8766"
+      restore_script:
+        description: "HostMachine VM restore script path"
+        required: true
+        default: "C:\\Users\\alion\\Scripts\\vmware_restore_test1.py"
+      restore_gui:
+        description: "Pass --gui to the restore script"
+        required: true
+        type: boolean
+        default: true
+      run_vmware_restore:
+        description: "Run the HostMachine VM restore script before waiting for guest"
+        required: false
+        type: boolean
+        default: true
+      restore_extra_args_json:
+        description: "Extra JSON array args passed to the restore script"
+        required: false
+        default: "[]"
+      task_action:
+        description: "Guest task action"
+        required: true
+        type: choice
+        options:
+          - noop
+          - command
+          - python_script
+        default: noop
+      command_json:
+        description: "JSON command array used when task_action=command"
+        required: false
+        default: '["python", "--version"]'
+      python_script_text:
+        description: "Python code used when task_action=python_script"
+        required: false
+        default: "import platform\nimport sys\nprint('vm-test-template python_script ok')\nprint('python=' + platform.python_version())\nprint('executable=' + sys.executable)\n"
+      connect_timeout_seconds:
+        description: "Seconds to wait for guest /hello"
+        required: true
+        default: "600"
+      run_timeout_seconds:
+        description: "Seconds to wait for guest /result"
+        required: true
+        default: "1800"
+
+permissions:
+  contents: read
+
+jobs:
+  disposable-vm-smoke:
+    name: Host controller and guest agent smoke
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install project package
+        shell: python
+        run: |
+          import runpy
+          runpy.run_path("src/vm_test_template/disposable_vm/workflow_install.py", run_name="__main__")
+
+      - name: Run disposable VM guest agent smoke
+        shell: python
+        run: |
+          import runpy
+          runpy.run_path("src/vm_test_template/disposable_vm/workflow_runner.py", run_name="__main__")
+
+      - name: Upload disposable VM smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: disposable-vm-guest-agent-smoke
+          path: ${{ runner.temp }}\vm-test-template-disposable-vm
+          if-no-files-found: warn

@@ -1,0 +1,44 @@
+[project]
+name = "vm-test-template"
+version = "0.1.0"
+description = "Reusable HostMachine/disposable-VM integration test template"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [
+    { name = "VM Test Template Contributors" },
+]
+dependencies = [
+    "fastapi>=0.115.0",
+    "pydantic>=2.0.0",
+    "requests>=2.32.0",
+    "uvicorn>=0.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+vm-test-host-controller = "vm_test_template.disposable_vm.host_controller:main"
+vm-test-guest-agent = "vm_test_template.guest_vm.agent:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
