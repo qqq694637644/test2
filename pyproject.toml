@@ -23,6 +23,7 @@ dev = [
 [project.scripts]
 vm-test-host-controller = "vm_test_template.disposable_vm.host_controller:main"
 vm-test-guest-agent = "vm_test_template.guest_vm.agent:main"
+snake-game = "vm_test_template.snake:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

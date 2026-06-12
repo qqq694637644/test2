@@ -67,3 +67,20 @@ PORTABLE_WORKFLOW_DEVELOPMENT_LESSONS.md
 python -m pytest -q
 python -m compileall -q src tests
 ```
+
+## 命令行贪吃蛇
+
+安装本项目后可以在终端里运行一个纯标准库实现的贪吃蛇小游戏：
+
+```text
+python -m pip install -e .
+snake-game
+```
+
+也可以直接用模块方式运行：
+
+```text
+python -m vm_test_template.snake --width 30 --height 15 --speed 8
+```
+
+操作方式：`WASD` 或方向键移动，`P` 暂停，`Q` 退出。
