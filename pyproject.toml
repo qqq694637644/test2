@@ -1,28 +1,23 @@
 [project]
-name = "vm-test-template"
+name = "tank-battle"
 version = "0.1.0"
-description = "Reusable HostMachine/disposable-VM integration test template"
+description = "A deterministic terminal Tank Battle game written in Python"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
 authors = [
-    { name = "VM Test Template Contributors" },
+    { name = "Tank Battle Contributors" },
 ]
-dependencies = [
-    "fastapi>=0.115.0",
-    "pydantic>=2.0.0",
-    "requests>=2.32.0",
-    "uvicorn>=0.30.0",
-]
+dependencies = []
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
+    "ruff>=0.8.0",
 ]
 
 [project.scripts]
-vm-test-host-controller = "vm_test_template.disposable_vm.host_controller:main"
-vm-test-guest-agent = "vm_test_template.guest_vm.agent:main"
+tank-battle = "tank_battle.cli:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -34,6 +29,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["tank_battle*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
