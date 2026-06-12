@@ -30,23 +30,29 @@ class Direction(str, Enum):
 
     @property
     def delta(self) -> tuple[int, int]:
-        if self is Direction.UP:
-            return (-1, 0)
-        if self is Direction.DOWN:
-            return (1, 0)
-        if self is Direction.LEFT:
-            return (0, -1)
-        return (0, 1)
+        match self:
+            case Direction.UP:
+                return (-1, 0)
+            case Direction.DOWN:
+                return (1, 0)
+            case Direction.LEFT:
+                return (0, -1)
+            case Direction.RIGHT:
+                return (0, 1)
+        raise ValueError(f"unsupported direction: {self!r}")
 
     @property
     def glyph(self) -> str:
-        if self is Direction.UP:
-            return "^"
-        if self is Direction.DOWN:
-            return "v"
-        if self is Direction.LEFT:
-            return "<"
-        return ">"
+        match self:
+            case Direction.UP:
+                return "^"
+            case Direction.DOWN:
+                return "v"
+            case Direction.LEFT:
+                return "<"
+            case Direction.RIGHT:
+                return ">"
+        raise ValueError(f"unsupported direction: {self!r}")
 
 
 class Action(str, Enum):

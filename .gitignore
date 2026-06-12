@@ -7,5 +7,3 @@ __pycache__/
 dist/
 build/
 *.egg-info/
-.disposable-vm-results/
-vm-test-template-disposable-vm/

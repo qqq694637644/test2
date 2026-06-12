@@ -10,8 +10,20 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from tank_battle import Action, Game, GameResult, Position  # noqa: E402
+from tank_battle import Action, Direction, Game, GameResult, Position  # noqa: E402
 from tank_battle.cli import parse_command, run_scripted_actions  # noqa: E402
+
+
+def test_direction_delta_and_glyph_are_explicit_for_every_direction():
+    assert Direction.UP.delta == (-1, 0)
+    assert Direction.DOWN.delta == (1, 0)
+    assert Direction.LEFT.delta == (0, -1)
+    assert Direction.RIGHT.delta == (0, 1)
+
+    assert Direction.UP.glyph == "^"
+    assert Direction.DOWN.glyph == "v"
+    assert Direction.LEFT.glyph == "<"
+    assert Direction.RIGHT.glyph == ">"
 
 
 def test_level_parser_requires_one_player_and_rectangular_map():
